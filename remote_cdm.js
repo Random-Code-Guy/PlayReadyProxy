@@ -4,7 +4,7 @@ export class RemoteCdm {
         this.host = host;
         this.secret = secret;
         this.device_name = device_name;
-        this.proxy = proxy;  // Optional proxy parameter
+        this.proxy = proxy;
     }
 
     static from_object(obj) {
@@ -13,7 +13,7 @@ export class RemoteCdm {
             obj.host,
             obj.secret,
             obj.device_name ?? obj.name,
-            obj.proxy ?? null  // Handle proxy from object if present
+            obj.proxy ?? null
         );
     }
 
@@ -23,11 +23,10 @@ export class RemoteCdm {
     }
 
     async fetch_with_proxy(url, options) {
-        // If proxy is set, prepend proxy URL to the original host URL
         if (this.proxy) {
             options.headers = {
                 ...options.headers,
-                'X-Forwarded-For': this.proxy, // Optional: Forward the proxy information
+                'X-Forwarded-For': this.proxy,
             };
             url = `${this.proxy}${url}`;
         }
@@ -54,7 +53,6 @@ export class RemoteCdm {
             license_request.status
         );
         const license_request_json = await license_request.json();
-
         return license_request_json.data;
     }
 
@@ -71,7 +69,6 @@ export class RemoteCdm {
             }),
         });
         console.log("[PlayreadyProxy]", "REMOTE_CDM", "GET_KEYS", keys.status);
-
         return await keys.json();
     }
 }

@@ -4,6 +4,7 @@ import {
     stringToUint8Array,
     RemoteCDMManager,
     SettingsManager,
+    LocalCDMManager
 } from "../util.js";
 
 const key_container = document.getElementById("key-container");
@@ -27,6 +28,11 @@ export_button.addEventListener("click", async function () {
 // ================ Remote CDM ================
 document.getElementById("remoteInput").addEventListener("click", () => {
     chrome.runtime.sendMessage({ type: "OPEN_PICKER" });
+    window.close();
+});
+
+document.getElementById("localInput").addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "OPEN_PICKER_LOCAL" });
     window.close();
 });
 
@@ -60,13 +66,78 @@ remote_combobox.addEventListener("change", async function () {
     );
 });
 
-const local_combobox = document.getElementById("local-combobox");
-local_combobox.addEventListener("change", async function () {
-    await LocalCDMManager.saveSelectedLocalCDM(
-        local_combobox.options[local_combobox.selectedIndex].text
-    );
-});
 // ============================================
+
+// ================ Local CDM ================
+const localInput = document.getElementById("localInput");
+const localRemove = document.getElementById("localRemove");
+const localDownload = document.getElementById("localDownload");
+const local_combobox = document.getElementById("local-combobox");
+
+localInput.addEventListener("change", async function () {
+    const files = localInput.files;
+    for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const prdData = JSON.parse(event.target.result);
+                const deviceName = file.name.replace(".prd", "");
+                await LocalCDMManager.saveLocalCDM(deviceName, prdData);
+                await loadLocalCDMs();
+            } catch (error) {
+                console.error("Error parsing or saving PRD file:", error);
+                alert("Invalid PRD file format or error processing.");
+            }
+        };
+        reader.readAsText(file);
+    }
+    localInput.value = ''; // Clear input
+});
+
+localRemove.addEventListener("click", async function () {
+    const selectedOption = local_combobox.options[local_combobox.selectedIndex];
+    if (selectedOption) {
+        const deviceName = selectedOption.text;
+        await LocalCDMManager.removeLocalCDM(deviceName);
+        await loadLocalCDMs();
+    }
+});
+
+localDownload.addEventListener("click", async function () {
+    const selectedOption = local_combobox.options[local_combobox.selectedIndex];
+    if (selectedOption) {
+        const deviceName = selectedOption.text;
+        const localCdmData = await LocalCDMManager.getLocalCDM(deviceName);
+        if (localCdmData) {
+            SettingsManager.downloadFile(
+                stringToUint8Array(JSON.stringify(localCdmData)),
+                deviceName + ".prd"
+            );
+        }
+    }
+});
+
+async function loadLocalCDMs() {
+    local_combobox.innerHTML = "";
+    const localCDMs = await LocalCDMManager.getAllLocalCDMs();
+    for (const deviceName in localCDMs) {
+        const option = document.createElement("option");
+        option.value = deviceName;
+        option.text = deviceName;
+        local_combobox.appendChild(option);
+    }
+
+    const selectedLocalCDM = await LocalCDMManager.getSelectedLocalCDM();
+    if (selectedLocalCDM) {
+        local_combobox.value = selectedLocalCDM;
+    }
+}
+
+local_combobox.addEventListener("change", async function () {
+    const selectedDevice = local_combobox.options[local_combobox.selectedIndex]?.text;
+    await LocalCDMManager.saveSelectedLocalCDM(selectedDevice);
+});
+
 
 // ====================== Proxy Settings ======================
 
@@ -231,6 +302,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     enabled.checked = await SettingsManager.getEnabled();
     use_shaka.checked = await SettingsManager.getUseShakaPackager();
     downloader_name.value = await SettingsManager.getExecutableName();
+    await LocalCDMManager.loadSetAllLocalCDMs();
     await RemoteCDMManager.loadSetAllRemoteCDMs();
     await RemoteCDMManager.selectRemoteCDM(
         await RemoteCDMManager.getSelectedRemoteCDM()

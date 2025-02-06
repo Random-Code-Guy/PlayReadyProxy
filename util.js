@@ -76,6 +76,89 @@ export class AsyncLocalStorage {
     }
 }
 
+export class LocalCDMManager {
+    static async saveLocalCDM(name, obj) {
+        const result = await AsyncSyncStorage.getStorage(["local_cdms"]);
+        const array = result.local_cdms === undefined ? [] : result.local_cdms;
+        array.push(name);
+        await AsyncSyncStorage.setStorage({ local_cdms: array });
+        await AsyncSyncStorage.setStorage({ [name]: obj }); 
+    }
+
+    static async getLocalCDM(name) {
+        const result = await AsyncSyncStorage.getStorage([name]);
+        return result[name] || null;
+    }
+
+    static setLocalCDM(name) {
+        const local_combobox = document.getElementById("local-combobox");
+        if (local_combobox) {
+            const local_element = document.createElement("option");
+            local_element.text = name;
+            local_element.value = name;
+            local_combobox.appendChild(local_element);
+        } else {
+            console.warn("Local combobox not found. setLocalCDM might be called too early.");
+        }
+    }
+
+    static async getAllLocalCDMs() {
+        const result = await AsyncSyncStorage.getStorage(["local_cdms"]);
+        const array = result.local_cdms || [];
+        const cdms = {};
+        for (const item of array) {
+            cdms[item] = await this.getLocalCDM(item);
+        }
+        return cdms;
+    }
+
+    static async loadSetAllLocalCDMs() {
+        const localCDMs = await LocalCDMManager.getAllLocalCDMs();
+        const local_combobox = document.getElementById("local-combobox");
+
+        if (local_combobox) {
+            local_combobox.innerHTML = "";
+            for (const deviceName in localCDMs) {
+                LocalCDMManager.setLocalCDM(deviceName);
+            }
+
+            const selectedLocalCDM = await LocalCDMManager.getSelectedLocalCDM();
+            if (selectedLocalCDM) {
+                local_combobox.value = selectedLocalCDM;
+            }
+        } else {
+            console.warn("Local combobox not found. loadSetAllLocalCDMs might be called too early.");
+        }
+    }
+
+
+    static async saveSelectedLocalCDM(name) {
+        await AsyncSyncStorage.setStorage({ selected_local_cdm: name });
+    }
+
+    static async getSelectedLocalCDM() {
+        const result = await AsyncSyncStorage.getStorage(["selected_local_cdm"]);
+        return result["selected_local_cdm"] || "";
+    }
+
+    static async removeLocalCDM(name) {
+        const result = await AsyncSyncStorage.getStorage(["local_cdms"]);
+        const array = result.local_cdms === undefined ? [] : result.local_cdms;
+
+        const index = array.indexOf(name);
+        if (index > -1) {
+            array.splice(index, 1);
+        }
+
+        await AsyncSyncStorage.setStorage({ local_cdms: array });
+        await AsyncSyncStorage.removeStorage([name]);
+        if (await this.getSelectedLocalCDM() === name) {
+            await this.saveSelectedLocalCDM(null);
+        }
+    }
+}
+
+
 export class RemoteCDMManager {
     static async saveRemoteCDM(name, obj) {
         const result = await AsyncSyncStorage.getStorage(["remote_cdms"]);

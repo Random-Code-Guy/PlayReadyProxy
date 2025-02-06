@@ -2,6 +2,7 @@ import {
     uint8ArrayToBase64,
     SettingsManager,
     RemoteCDMManager,
+    LocalCDMManager,
     PSSHFromKID,
     stringToUTF16LEBytes,
 } from "./util.js";
@@ -245,6 +246,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
             case "GET_LOGS":
                 sendResponse(logs);
+                break;
+            case "OPEN_PICKER_LOCAL":
+                chrome.windows.create({
+                    url: "picker/filePickerLocal.html",
+                    type: "popup",
+                    width: 300,
+                    height: 200,
+                });
                 break;
             case "OPEN_PICKER":
                 chrome.windows.create({
