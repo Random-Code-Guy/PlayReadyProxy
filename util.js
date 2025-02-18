@@ -518,3 +518,14 @@ export function hexStringToUint8Array(hexString) {
     }
     return bytes;
 }
+
+export function decodeBase64(base64String) {
+    try {
+        // Decode the Base64 string
+        const decodedData = atob(base64String);
+        return decodedData;
+    } catch (error) {
+        console.error("Invalid Base64 string", error);
+        return null;
+    }
+}
