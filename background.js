@@ -1,4 +1,5 @@
 import {
+    decodeBase64,
     uint8ArrayToBase64,
     SettingsManager,
     RemoteCDMManager,
